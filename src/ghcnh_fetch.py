@@ -3,7 +3,7 @@
 from urllib.request import urlretrieve
 from config import ghcnh_filenames, ghcnh_local_path
 
-url_prefix = 'https://www.ncei.noaa.gov/oa/global-historical-climatology-network/hourly/archive/'
+url_prefix = 'https://www.ncei.noaa.gov/oa/global-historical-climatology-network/hourly/inventory/'
 
 for file in ghcnh_filenames:
     print('downloading ' + file)

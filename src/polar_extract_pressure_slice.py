@@ -23,7 +23,7 @@ for rng_idx, rng in enumerate(pressure_year_ranges):
                 # There are many more stations from 2022 onward.
                 if rng_idx and station_id not in range_pair_data[0]:
                     continue
-
+                # todo I think each file needs to be closed - use "with"
                 psv_file = tf.extractfile(psv_info)
                 df = pl.read_csv(psv_file, separator='|',
                     columns=usecols,
