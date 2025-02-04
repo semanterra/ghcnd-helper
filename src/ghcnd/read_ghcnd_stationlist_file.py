@@ -1,13 +1,11 @@
 from ghcnd_config import ghcnd_local_stations_list
 
 import polars as pl
-from pathlib import Path
-
-
 
 '''
 The stationlist file is much larger than the ghcnh similar file, 
 and is only available in a fixed-field .txt format - no .csv.
+There are 118,492 stations - I suspect this is many more than are currently in use.
 
 The following is from the readme.txt:
 IV. FORMAT OF "ghcnd-stations.txt"
@@ -118,8 +116,8 @@ def read_stationlist_file():
     schema = [('ID',pl.String),
               ('LATITUDE',pl.Float64), ( 'LONGITUDE',pl.Float64), ( 'ELEVATION',pl.Float64),
               ( 'STATE',pl.String), ( 'NAME',pl.String),
-              ( 'GSN_FLAG',pl.String), ( 'HCN_CRN_FLAG',pl.String),]
-    is_float_col = [False, True, True, True, False, False, False, False]
+              ( 'GSN_FLAG',pl.String), ( 'HCN_CRN_FLAG',pl.String), ('WMO_ID',pl.String )]
+    is_float_col = [False, True, True, True, False, False, False, False, False]
 
     # Read the fixed-field file
 

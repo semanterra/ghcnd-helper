@@ -10,21 +10,30 @@ then do it as post-processing - leave the output of this complete.
 
 def make_schema():
     schema = [
-        ('DATE', pl.Date)]
+        ('STATION', pl.String),
+        ('DATE', pl.Date),
+        ('LATITUDE', pl.Float32),
+        ('LONGITUDE', pl.Float32),
+        ('ELEVATION', pl.Float32),
+        ('NAME', pl.String),
+    ]
 
-    schema.extend(make_attributed([
+    schema.extend(_make_attributed([
             'PRCP',
             'SNOW', 'SNWD',
-            'TMAX', 'TMIN',
+            'TMAX', 'TMIN', 'TAVG',
             'ACMC', 'ACMH', 'ACSC', 'ACSH',
-            'AWND',
-            'EVAP'
+            'ADPT', 'ASLP', 'ASTP', 'AWBT',
+            'AWDR', 'AWND',
+            'DAEV', 'DAPR', 'DASF', 'DATN', 'DATX', 'DAWM', 'DWPR',
+            'EVAP',
             'FMTM',
             'FRGB', 'FRGT', 'FRTH',
             'GAHT',
             'MDEV', 'MDPR', 'MDSF', 'MDTN', 'MDTX', 'MDWM',
             'MNPN', 'MXPN',
             'PSUN',
+            'RHAV', 'RHMN', 'RHMX',
             'THIC',
             'TOBS',
             'TSUN',
@@ -34,39 +43,37 @@ def make_schema():
             'WSF1', 'WSF2', 'WSF5', 'WSFG', 'WSFI', 'WSFM'
         ]))
 
-    schema.extend(make_attributed([
+    schema.extend(_make_attributed([
     'DAEV', 'DAPR', 'DASF', 'DATN', 'DATX', 'DAWM', 'DWPR'
     ], pl.Int32))
-    schema.extend(make_attributed([
+    schema.extend(_make_attributed([
         'PGTM'
     ], pl.String))
 
-    schema.extend(make_soil_temps())
-    schema.extend(make_weather_types())
-    schema.extend(make_weather_vicinity())
-    return schema
+    schema.extend(_make_soil_temps())
+    schema.extend(_make_weather_types())
+    schema.extend(_make_weather_vicinity())
 
-def make_attributed(names,type=pl.Float32):
+    return dict(schema)
+
+def _make_attributed(names, type=pl.Float32):
     for name in names:
         yield ((name, type))
         yield ((name + '_ATTRIBUTES', pl.String))
 
-def make_soil_temps():
+def _make_soil_temps():
     ret = []
     for prefix in ['SN', 'SX']:
         for ground_cover in '012345678':
             for depth in '012334567':
                 ret.append(prefix+ground_cover+depth)
-    yield from make_attributed(ret)
+    yield from _make_attributed(ret)
 
-def make_weather_types():
-    ret = ('WT' + f"{i:02d}" for i in range(1,22))
-    yield from make_attributed(ret)
+def _make_weather_types():
+    ret = ('WT' + f"{i:02d}" for i in range(1,23))
+    yield from _make_attributed(ret)
 
-def make_weather_vicinity():
+def _make_weather_vicinity():
     ret = ('WV' + f"{i:02d}" for i in [1,3,7,18,20])
-    yield from make_attributed(ret)
+    yield from _make_attributed(ret)
 
-
-
-print(str(make_schema()))
