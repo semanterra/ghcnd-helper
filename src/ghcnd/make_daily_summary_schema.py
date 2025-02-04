@@ -60,6 +60,9 @@ def _make_attributed(names, type=pl.Float32):
     for name in names:
         yield ((name, type))
         yield ((name + '_ATTRIBUTES', pl.String))
+        yield ((name + '_MEASURE', pl.String))
+        yield ((name + '_QUALITY', pl.String))
+        yield ((name + '_SOURCE', pl.String))
 
 def _make_soil_temps():
     ret = []
