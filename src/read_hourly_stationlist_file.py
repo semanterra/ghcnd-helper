@@ -1,7 +1,6 @@
 from config import ghcnh_local_doc_path
 
 import polars as pl
-from pathlib import Path
 
 '''
 ID, 1-11, Character
