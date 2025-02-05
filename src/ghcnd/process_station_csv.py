@@ -39,7 +39,9 @@ station_describe_schema = {
     'COUNT':pl.Int32,
     'MAX_FLOAT': pl.Float32,
     'MIN_FLOAT': pl.Float32,
-    'NULL_COUNT': pl.Int32
+    'NULL_COUNT': pl.Int32,
+    'FIRST_DATE': pl.Date,
+    'LAST_DATE': pl.Date,
 }
 
 attr_type_enum = pl.Enum(['MEASURE','QUALITY','SOURCE'])
@@ -110,7 +112,7 @@ def process_station_csv(tar_info, buff, output_dict):
         output_dict['stations_flat'].vstack(station_flat_df, in_place=True)
 
 
-    def record_describe_data(station_df, output_dict):
+    def record_describe_data(station_df, output_dict, station_obvalues):
 
         counts = station_df.count().row(0)
         null_counts = station_df.null_count().row(0)
@@ -131,7 +133,21 @@ def process_station_csv(tar_info, buff, output_dict):
             'NULL_COUNT': null_counts,
         }
 
-        station_describe_df = pl.DataFrame( station_describe_data, schema=station_describe_schema)
+        no_date_schema = dict(station_describe_schema)
+        del no_date_schema['FIRST_DATE']
+        del no_date_schema['LAST_DATE']
+
+        station_describe_df = pl.DataFrame( station_describe_data, schema=no_date_schema)
+
+        first_last_dfs = map(lambda obvalue:
+                             station_df.drop_nulls([obvalue]).select(
+                                 pl.lit(obvalue).cast(column_enum).alias('COLUMN'),
+                                 pl.first('DATE').alias('FIRST_DATE'),
+                                 pl.last('DATE').alias('LAST_DATE')
+                             ), station_obvalues)
+        first_last_df = pl.concat(first_last_dfs)
+        station_describe_df = station_describe_df.join(first_last_df, on='COLUMN', how='left',coalesce = True)
+
         output_dict['stations_describe'].vstack(station_describe_df, in_place=True)
 
 
@@ -152,6 +168,13 @@ def process_station_csv(tar_info, buff, output_dict):
                     else:
                         output_dict['stations_attr_use'] = value_count_df
 
+
+    '''
+       MAINLINE of process_station_csv
+    
+        Some inner functions use the variables defined below - watch out!
+    '''
+
     station_df, filtered_schema = read_station_csv(buff)
 
     attribute_cols = list(filter(lambda col: col.endswith('_ATTRIBUTES'), filtered_schema.keys()))
@@ -166,7 +189,7 @@ def process_station_csv(tar_info, buff, output_dict):
     mins = min_df.row(0)
 
     record_flat_data(station_df, output_dict)
-    record_describe_data(station_df, output_dict)
+    record_describe_data(station_df, output_dict, station_obvalues)
     record_attr_use_data(station_df, output_dict)
     print(output_dict)
 
