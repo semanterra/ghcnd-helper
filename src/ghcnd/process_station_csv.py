@@ -1,5 +1,5 @@
 
-from ghcnd_config import daily_summary_path
+from ghcnd_config import daily_summary_path, daily_summary_output_dir
 
 import tarfile
 import polars as pl
@@ -52,6 +52,13 @@ station_attr_use_schema = {
     'ATTR': attr_type_enum,
     'VALUE':pl.String,  # value within attribute to count
     'COUNT':pl.Int32,
+}
+
+station_hist_schema = {
+    'STATION': pl.String,
+    'DECADE': pl.Date,
+    'COLUMN': column_enum,
+    'COUNT': pl.UInt32,
 }
 
 def process_station_csv(tar_info, buff, output_dict):
@@ -139,15 +146,17 @@ def process_station_csv(tar_info, buff, output_dict):
 
         station_describe_df = pl.DataFrame( station_describe_data, schema=no_date_schema)
 
-        first_last_dfs = map(lambda obvalue:
+        first_last_dfs = list(map(lambda obvalue:
                              station_df.drop_nulls([obvalue]).select(
                                  pl.lit(obvalue).cast(column_enum).alias('COLUMN'),
                                  pl.first('DATE').alias('FIRST_DATE'),
                                  pl.last('DATE').alias('LAST_DATE')
-                             ), station_obvalues)
-        first_last_df = pl.concat(first_last_dfs)
-        station_describe_df = station_describe_df.join(first_last_df, on='COLUMN', how='left',coalesce = True)
-
+                             ), station_obvalues))
+        if len(first_last_dfs):
+            first_last_df = pl.concat(first_last_dfs)
+            station_describe_df = station_describe_df.join(first_last_df, on='COLUMN', how='left',coalesce = True)
+        else:
+            station_describe_df = station_describe_df.with_columns(FIRST_DATE=pl.lit(None), LAST_DATE=pl.lit(None))
         output_dict['stations_describe'].vstack(station_describe_df, in_place=True)
 
 
@@ -168,6 +177,19 @@ def process_station_csv(tar_info, buff, output_dict):
                     else:
                         output_dict['stations_attr_use'] = value_count_df
 
+    def record_hist_data(station_df, output_dict):
+        station_hist = (station_df.group_by_dynamic(
+            index_column='DATE',
+            every='10y',
+            )
+            .agg(pl.col(station_obvalues).count())
+            .unpivot(index='DATE')
+            .rename({'variable':'COLUMN'})
+            .with_columns(COLUMN=pl.col('COLUMN').cast(column_enum))
+            .rename({'value':'COUNT', 'DATE':'DECADE'})
+            .insert_column(0, pl.lit(station).alias("STATION"))
+        )
+        output_dict['stations_hist'].vstack(station_hist, in_place=True)
 
     '''
        MAINLINE of process_station_csv
@@ -191,22 +213,23 @@ def process_station_csv(tar_info, buff, output_dict):
     record_flat_data(station_df, output_dict)
     record_describe_data(station_df, output_dict, station_obvalues)
     record_attr_use_data(station_df, output_dict)
-    print(output_dict)
+    record_hist_data(station_df, output_dict)
 
 def main():
     output_dicts = {
         'stations_flat': pl.DataFrame([], schema=station_flat_schema),
         'stations_describe': pl.DataFrame([], schema=station_describe_schema, orient='row'),
         'stations_attr_use':  pl.DataFrame([], schema=station_attr_use_schema, orient='row'),
+        'stations_hist': pl.DataFrame([], schema=station_hist_schema, orient='row'),
     }
-    read_daily_summary_gz(daily_summary_path, process_station_csv, output_dicts, max_stations=1002)
+    read_daily_summary_gz(daily_summary_path, process_station_csv, output_dicts)
+    for name, df in output_dicts.items():
+        df.write_parquet(daily_summary_output_dir + name + '.parquet')
 
 main()
 
-# TODO save dict to disk
 # TODO get aggregate statistics for each column from stations_describe - # of stations for each stat
 # TODO characterize column usage
 # TODO characterize time coverage - add column with % of date range covered
 # TODO find unused columns
 # TODO figure out WT*, WV*
-# TODO characterize attribute usage
