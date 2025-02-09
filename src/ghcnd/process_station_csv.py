@@ -1,10 +1,9 @@
 
-from ghcnd_config import daily_summary_path, daily_summary_output_dir
+from .ghcnd_config import daily_summary_path, daily_summary_output_dir
 
-import tarfile
 import polars as pl
-import io
 import warnings
+from constants import DfName
 
 from line_profiler_pycharm import profile
 
@@ -116,7 +115,7 @@ def process_station_csv(tar_info, buff, output_dict):
             'N_NAMES': n_names,
         }
         station_flat_df = pl.DataFrame( station_flat_data, schema=station_flat_schema)
-        output_dict['stations_flat'].vstack(station_flat_df, in_place=True)
+        output_dict[DfName.stations_flat].vstack(station_flat_df, in_place=True)
 
 
     def record_describe_data(station_df, output_dict, station_obvalues):
@@ -157,7 +156,7 @@ def process_station_csv(tar_info, buff, output_dict):
             station_describe_df = station_describe_df.join(first_last_df, on='COLUMN', how='left',coalesce = True)
         else:
             station_describe_df = station_describe_df.with_columns(FIRST_DATE=pl.lit(None), LAST_DATE=pl.lit(None))
-        output_dict['stations_describe'].vstack(station_describe_df, in_place=True)
+        output_dict[DfName.stations_describe].vstack(station_describe_df, in_place=True)
 
 
     def record_attr_use_data(station_df, output_dict):
@@ -172,10 +171,10 @@ def process_station_csv(tar_info, buff, output_dict):
                     value_count_df.insert_column(1, pl.lit(obvalue).cast(column_enum).alias('OBVALUE'))
                     value_count_df.insert_column(2, pl.lit(attr).cast(attr_type_enum).alias('ATTR'))
 
-                    if output_dict['stations_attr_use'].height:
-                        output_dict['stations_attr_use'].vstack(value_count_df, in_place=True)
+                    if output_dict[DfName.stations_attr_use].height:
+                        output_dict[DfName.stations_attr_use].vstack(value_count_df, in_place=True)
                     else:
-                        output_dict['stations_attr_use'] = value_count_df
+                        output_dict[DfName.stations_attr_use] = value_count_df
 
     def record_hist_data(station_df, output_dict):
         station_hist = (station_df.group_by_dynamic(
@@ -189,7 +188,7 @@ def process_station_csv(tar_info, buff, output_dict):
             .rename({'value':'COUNT', 'DATE':'DECADE'})
             .insert_column(0, pl.lit(station).alias("STATION"))
         )
-        output_dict['stations_hist'].vstack(station_hist, in_place=True)
+        output_dict[DfName.stations_hist].vstack(station_hist, in_place=True)
 
     '''
        MAINLINE of process_station_csv
@@ -217,10 +216,10 @@ def process_station_csv(tar_info, buff, output_dict):
 
 def main():
     output_dicts = {
-        'stations_flat': pl.DataFrame([], schema=station_flat_schema),
-        'stations_describe': pl.DataFrame([], schema=station_describe_schema, orient='row'),
-        'stations_attr_use':  pl.DataFrame([], schema=station_attr_use_schema, orient='row'),
-        'stations_hist': pl.DataFrame([], schema=station_hist_schema, orient='row'),
+        DfName.stations_flat:      pl.DataFrame([], schema=station_flat_schema),
+        DfName.stations_describe:  pl.DataFrame([], schema=station_describe_schema, orient='row'),
+        DfName.stations_attr_use:  pl.DataFrame([], schema=station_attr_use_schema, orient='row'),
+        DfName.stations_hist:      pl.DataFrame([], schema=station_hist_schema, orient='row'),
     }
     read_daily_summary_gz(daily_summary_path, process_station_csv, output_dicts)
     for name, df in output_dicts.items():

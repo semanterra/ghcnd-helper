@@ -12,6 +12,7 @@ notebook = "^7.2.1"
 polars = "^1.5.0"
 matplotlib = "^3.9.2"
 line-profiler-pycharm = "^1.2.0"
+altair = "^5.5.0"
 
 
 [build-system]
