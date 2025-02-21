@@ -1,6 +1,7 @@
 from .read_parquet_file import read_parquet_df
 from ..constants import DfName
 import polars as pl
+import plotly.express as px
 
 # - height (stations, observations)
 # - width (columns)
@@ -23,16 +24,36 @@ def compute_singletons():
     median_obvalues = flat_df['N_OBVALUES'].median()
     n_obvalue_counts = flat_df['N_OBVALUES'].value_counts().sort('N_OBVALUES')
 
-    # plot_n_obvalue_counts = n_obvalue_counts.plot.point(x='N_OBVALUES', y='count')
+    plot_n_obvalue_counts = n_obvalue_counts.plot.point(x='N_OBVALUES', y='count').properties(width=900)
+    #    plot_n_obvalue_counts.show()
+    # px.bar(n_obvalue_counts, x='N_OBVALUES', y='count', log_y=True).show()
+
+    # compute number of stations reporting in each year
+    start_years = flat_df['DATE_MIN'].dt.year().value_counts().sort('DATE_MIN')
+    end_years = flat_df['DATE_MAX'].dt.year().value_counts().sort('DATE_MAX')
+    # shift end_years ahead 1 year
+    end_years = end_years.with_columns(DATE_MAX=pl.col('DATE_MAX')+1)
+    year_df = pl.DataFrame(data={'YEAR':range(1763,2026), 'COUNT':0}, schema={'YEAR':pl.Int32,'COUNT':pl.UInt32})
+    year_df = year_df.join(start_years, how='left', left_on='YEAR', right_on='DATE_MIN', maintain_order='left', suffix='_START')
+    year_df = year_df.join(end_years, how='left', left_on='YEAR', right_on='DATE_MAX', maintain_order='left', suffix='_END')
+    year_df = year_df.fill_null(0)
+    year_df =year_df.with_columns(CUM=pl.col('count').cum_sum().sub(pl.col('count_END').cum_sum()))
+
+    # PLOT: number of stations reporting in each year
+    # px.line(year_df, x='YEAR', y='CUM', range_x=[1763, 2024], log_y=True).show()
 
     describe_df = read_parquet_df(DfName.stations_describe)
-    used_cols = describe_df.select(pl.col('COLUMN')).unique().cast(pl.String)['COLUMN']
+    used_cols = describe_df.select(pl.col('COLUMN')).unique().cast(pl.String)['COLUMN'].sort()
     n_obvalues = used_cols.filter(used_cols.str.ends_with('ATTRIBUTES')).len()
 
     attr_df = read_parquet_df(DfName.stations_attr_use)
-    used_values_df = attr_df.select(['ATTR','VALUE']).unique().sort(['ATTR','VALUE'])
-    with pl.Config(tbl_rows=100):
-        print(used_values_df)
+    # show count of each value used for each attribute type
+    # used_values_df = attr_df.select(['ATTR','VALUE']).unique().sort(['ATTR','VALUE'])
+    used_values_df = attr_df.group_by('ATTR','VALUE').agg(
+            pl.col('COUNT').sum()
+    ).with_columns(pl.concat_str(pl.col('ATTR').cast(pl.String), pl.col('VALUE'), separator=': ').alias('LABEL')
+    ).sort(by='LABEL', descending=True)
 
+    # px.bar(used_values_df, y='LABEL', x='COUNT', orientation='h', log_x=True).show()
 
-compute_singletons()
+    print('done')

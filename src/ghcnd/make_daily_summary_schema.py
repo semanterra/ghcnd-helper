@@ -74,9 +74,9 @@ def _make_soil_temps():
 
 def _make_weather_types():
     ret = ('WT' + f"{i:02d}" for i in range(1,23))
-    yield from _make_attributed(ret)
+    yield from _make_attributed(ret, pl.String)
 
 def _make_weather_vicinity():
     ret = ('WV' + f"{i:02d}" for i in [1,3,7,18,20])
-    yield from _make_attributed(ret)
+    yield from _make_attributed(ret, pl.String)
 

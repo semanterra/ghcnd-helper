@@ -1,5 +1,5 @@
 
-from ghcnd_config import daily_summary_path
+from .ghcnd_config import daily_summary_path
 
 import tarfile
 import polars as pl
@@ -7,7 +7,7 @@ import io
 import warnings
 from time import time
 warnings.filterwarnings("ignore", message="Polars found a filename")
-from make_daily_summary_schema import make_schema
+from .make_daily_summary_schema import make_schema
 
 '''
 There are currently (20-01-2025) 127819 station files.

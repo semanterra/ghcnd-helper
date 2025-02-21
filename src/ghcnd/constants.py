@@ -5,5 +5,6 @@ class DfName:
     stations_describe = 'stations_describe'
     stations_attr_use = 'stations_attr_use'
     stations_hist = 'stations_hist'
+    stations_wtwv = 'stations_wtwv'
 
 

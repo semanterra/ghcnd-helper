@@ -9,10 +9,11 @@ readme = "README.md"
 python = "^3.12"
 pandas = "^2.2.2"
 notebook = "^7.2.1"
-polars = "^1.5.0"
+polars = "^1.21.0"
 matplotlib = "^3.9.2"
 line-profiler-pycharm = "^1.2.0"
 altair = "^5.5.0"
+plotly = "^6.0.0"
 
 
 [build-system]

@@ -3,13 +3,13 @@ from .ghcnd_config import daily_summary_path, daily_summary_output_dir
 
 import polars as pl
 import warnings
-from constants import DfName
+from .constants import DfName
 
 from line_profiler_pycharm import profile
 
 warnings.filterwarnings("ignore", message="Polars found a filename")
-from make_daily_summary_schema import make_schema
-from read_daily_summary_gz import read_daily_summary_gz
+from .make_daily_summary_schema import make_schema
+from .read_daily_summary_gz import read_daily_summary_gz
 '''
 There are currently (20-01-2025) 127819 station files.
 '''
@@ -51,6 +51,13 @@ station_attr_use_schema = {
     'ATTR': attr_type_enum,
     'VALUE':pl.String,  # value within attribute to count
     'COUNT':pl.Int32,
+}
+
+station_wtwv_schema = {
+    'STATION': pl.String,
+    'COLUMN': pl.String,
+    'VALUE':pl.String,  # value within attribute to count
+    'COUNT':pl.UInt32,
 }
 
 station_hist_schema = {
@@ -190,6 +197,32 @@ def process_station_csv(tar_info, buff, output_dict):
         )
         output_dict[DfName.stations_hist].vstack(station_hist, in_place=True)
 
+    def record_wtwv_data(station_df, output_dict, station_obvalues):
+        # get list of WT and WV obvalues
+        station_wtwv_obvalues = list(filter(lambda col: col.startswith('WT') or col.startswith('WV'), station_obvalues))
+        if len(station_wtwv_obvalues) == 0:
+            return
+
+        wtwv_rows = (station_df
+            .select(pl.col(station_wtwv_obvalues))
+            .filter(~pl.all_horizontal(pl.col(station_wtwv_obvalues).is_null()))
+                     )
+
+        counts_per_col = []
+        for col in station_wtwv_obvalues:
+            value_counts = wtwv_rows.select(pl.col(col).value_counts())
+            col_counts = (value_counts.select(pl.col(col)
+                                           .struct.rename_fields(['VALUE', 'COUNT'])
+                                           .struct.unnest())
+                        .drop_nulls()
+                        .insert_column(0, pl.lit(col).alias('COLUMN')))
+            counts_per_col.append(col_counts)
+
+        station_wtwv_df = (pl.concat(counts_per_col)
+                           .insert_column(0,pl.lit(station).alias('STATION'))
+                           )
+        output_dict[DfName.stations_wtwv].vstack(station_wtwv_df, in_place=True)
+
     '''
        MAINLINE of process_station_csv
     
@@ -213,6 +246,7 @@ def process_station_csv(tar_info, buff, output_dict):
     record_describe_data(station_df, output_dict, station_obvalues)
     record_attr_use_data(station_df, output_dict)
     record_hist_data(station_df, output_dict)
+    record_wtwv_data(station_df, output_dict, station_obvalues)
 
 def main():
     output_dicts = {
@@ -220,12 +254,13 @@ def main():
         DfName.stations_describe:  pl.DataFrame([], schema=station_describe_schema, orient='row'),
         DfName.stations_attr_use:  pl.DataFrame([], schema=station_attr_use_schema, orient='row'),
         DfName.stations_hist:      pl.DataFrame([], schema=station_hist_schema, orient='row'),
+        DfName.stations_wtwv:      pl.DataFrame([], schema=station_wtwv_schema, orient='row'),
     }
     read_daily_summary_gz(daily_summary_path, process_station_csv, output_dicts)
+    print('writing')
     for name, df in output_dicts.items():
         df.write_parquet(daily_summary_output_dir + name + '.parquet')
 
-main()
 
 # TODO get aggregate statistics for each column from stations_describe - # of stations for each stat
 # TODO characterize column usage
