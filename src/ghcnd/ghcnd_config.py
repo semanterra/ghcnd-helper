@@ -3,3 +3,4 @@ daily_summary_output_dir =    '/Users/estaub/climatex/ghcnd/daily-summaries-outp
 
 ghcnd_local_stations_list = '/Users/estaub/climatex/ghcnd/station-lists/2025-01-20.txt'
 
+plot_dir = '/Users/estaub/git/ghcnh_fetch/plots/'

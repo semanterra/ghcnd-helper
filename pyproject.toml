@@ -14,6 +14,9 @@ matplotlib = "^3.9.2"
 line-profiler-pycharm = "^1.2.0"
 altair = "^5.5.0"
 plotly = "^6.0.0"
+# kaleido publish is messed up, hence version lock.
+# https://github.com/plotly/Kaleido/issues/176
+kaleido = "0.2.1"
 
 
 [build-system]

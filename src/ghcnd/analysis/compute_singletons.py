@@ -1,5 +1,6 @@
 from .read_parquet_file import read_parquet_df
 from ..constants import DfName
+from ..ghcnd_config import plot_dir
 import polars as pl
 import plotly.express as px
 
@@ -24,10 +25,11 @@ def compute_singletons():
     median_obvalues = flat_df['N_OBVALUES'].median()
     n_obvalue_counts = flat_df['N_OBVALUES'].value_counts().sort('N_OBVALUES')
 
-    plot_n_obvalue_counts = n_obvalue_counts.plot.point(x='N_OBVALUES', y='count').properties(width=900)
-    #    plot_n_obvalue_counts.show()
-    # px.bar(n_obvalue_counts, x='N_OBVALUES', y='count', log_y=True).show()
-
+    plot_n_obvalue_counts = px.bar(n_obvalue_counts, x='N_OBVALUES', y='count', log_y=True,
+                                   labels={ 'N_OBVALUES': 'Total number of different obvalues ever reported by station',
+                                            'count':'Number of stations'
+                                            })
+    plot_n_obvalue_counts.write_image(plot_dir + 'nObvalueCountHisto.png')
     # compute number of stations reporting in each year
     start_years = flat_df['DATE_MIN'].dt.year().value_counts().sort('DATE_MIN')
     end_years = flat_df['DATE_MAX'].dt.year().value_counts().sort('DATE_MAX')
@@ -39,8 +41,9 @@ def compute_singletons():
     year_df = year_df.fill_null(0)
     year_df =year_df.with_columns(CUM=pl.col('count').cum_sum().sub(pl.col('count_END').cum_sum()))
 
-    # PLOT: number of stations reporting in each year
-    # px.line(year_df, x='YEAR', y='CUM', range_x=[1763, 2024], log_y=True).show()
+    # PLOT : number of stations reporting in each year
+    plot_stations__year = px.line(year_df, x='YEAR', y='CUM', range_x=[1763, 2024], log_y=True, labels={'YEAR':'Year', 'CUM': 'Active Stations'})
+    plot_stations__year.write_image(plot_dir + 'stations__year.png')
 
     describe_df = read_parquet_df(DfName.stations_describe)
     used_cols = describe_df.select(pl.col('COLUMN')).unique().cast(pl.String)['COLUMN'].sort()
