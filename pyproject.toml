@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "ghcnh-fetch"
+name = "ghcnd_helper"
 version = "0.1.0"
 description = ""
 authors = ["Your Name <you@example.com>"]

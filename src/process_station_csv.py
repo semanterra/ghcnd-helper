@@ -1,15 +1,15 @@
 
-from .ghcnd_config import daily_summary_path, daily_summary_output_dir
+from ghcnd_config import daily_summary_path, daily_summary_output_dir
 
 import polars as pl
 import warnings
-from .constants import DfName
+from constants import DfName
 
 from line_profiler_pycharm import profile
 
 warnings.filterwarnings("ignore", message="Polars found a filename")
-from .make_daily_summary_schema import make_schema
-from .read_daily_summary_gz import read_daily_summary_gz
+from make_daily_summary_schema import make_schema
+from read_daily_summary_gz import read_daily_summary_gz
 '''
 There are currently (20-01-2025) 127819 station files.
 '''

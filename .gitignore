@@ -1,2 +1,5 @@
 /scratch/
 /src/ghcnd/process_station_csv.py.pclprof
+/plots/
+/poetry.lock
+/.idea/
