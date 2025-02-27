@@ -5,3 +5,9 @@
 /.idea/
 __pycache__/
 /.idea/
+/doc/_site/
+.sass-cache
+.jekyll-cache
+.jekyll-metadata
+vendor
+/doc/Gemfile.lock
